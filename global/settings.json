@@ -1,0 +1,100 @@
+{
+  "permissions": {
+    "defaultMode": "bypassPermissions",
+    "allow": [
+      "PowerShell(Get-ScheduledTask*)",
+      "PowerShell(Get-PSDrive*)",
+      "PowerShell(Test-Path*)",
+      "PowerShell(Get-ChildItem*)",
+      "PowerShell(Get-Item*)",
+      "PowerShell(Get-Process*)",
+      "Bash(git status*)",
+      "Bash(git log*)",
+      "Bash(git diff*)",
+      "Bash(git show*)",
+      "Bash(git branch*)",
+      "Bash(git remote*)"
+    ]
+  },
+  "statusLine": {
+    "type": "command",
+    "command": "pwsh -NoProfile -File \"D:\\메인작업\\hooks\\statusline.ps1\"",
+    "padding": 1,
+    "refreshInterval": 30
+  },
+  "hooks": {
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python -c \"import json; print(json.dumps({'hookSpecificOutput':{'hookEventName':'UserPromptSubmit','additionalContext':'[보고 톤 규약] 박광우님은 IT 비기술자(요양원 원장). 응답을 일상 한국말로 풀어서. 기술 용어/약어/코드 인용 최소화 — 꼭 필요할 때만 비유와 함께. 결과의 의미를 먼저, 기술 디테일은 뒤로. 표·이모지·간단 비유 적극 활용. 코드 변경 보고 시 \\\"무엇이 좋아졌나/실생활에 어떻게 영향 주나\\\" 를 첫 줄에 둘 것.'}}))\"",
+            "timeout": 5
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python -c \"import shutil,os,json,sys; data=json.load(sys.stdin); f=data.get('tool_input',{}).get('file_path',''); src='C:/Users/user/carefor_checker/scraper/medication_checker.py'; shutil.copy2(src, src+'.bak') if f and 'medication_checker' in f and os.path.exists(src) else None\" 2>/dev/null || true",
+            "timeout": 10
+          }
+        ]
+      },
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "shell": "powershell",
+            "command": "& 'D:\\메인작업\\hooks\\block_off_project_writes.ps1'",
+            "timeout": 10
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python -c \"import json,sys; d=json.load(sys.stdin); f=(d.get('tool_input') or {}).get('file_path',''); print(json.dumps({'hookSpecificOutput':{'hookEventName':'PostToolUse','additionalContext':'[CLAUDE.md 업데이트 필수] 코드 수정 완료 — 해당 폴더 CLAUDE.md에 즉시 반영하라. 사용자에게 결과 보고 전에 CLAUDE.md 먼저 업데이트.'}})) if f and 'CLAUDE.md' not in f else None\"",
+            "timeout": 5
+          }
+        ]
+      },
+      {
+        "matcher": "Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python -c \"import json,sys; data=json.load(sys.stdin); f=data.get('tool_input',{}).get('file_path',''); exec(\\\"import subprocess,sys; r=subprocess.run(['python','-c','from scraper.medication_checker import scrape_medications_all,check_medication_expiry_quantity; print(chr(79)+chr(75))'],capture_output=True,text=True,cwd='C:/Users/user/carefor_checker'); print('medication_checker import '+('OK' if r.returncode==0 else 'FAIL: '+r.stderr[:200]))\\\") if f and 'medication_checker' in f else None\" 2>/dev/null || true",
+            "timeout": 15
+          },
+          {
+            "type": "command",
+            "command": "python C:/Users/user/carefor_checker/run_tests_hook.py",
+            "timeout": 120
+          }
+        ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python -c \"import glob,json,sys; files=sorted(glob.glob('C:/Users/user/carefor_checker/results/*.json')); f=files[-1] if files else None; d=json.load(open(f,encoding='utf-8')) if f else None; print('JSON OK:',f) if d else None\" 2>/dev/null || true",
+            "timeout": 10
+          }
+        ]
+      }
+    ]
+  },
+  "skipDangerousModePermissionPrompt": true,
+  "theme": "dark"
+}
